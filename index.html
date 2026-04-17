@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>評選流程自動化系統 - 雲端版</title>
+    <title>評選流程自動化系統 - 雲端修復版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap');
@@ -22,7 +22,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
         </div>
         <h1 class="text-4xl font-bold mb-4">點擊啟動雲端音訊系統</h1>
-        <p class="text-slate-400">系統將自動從 Google Drive 載入您的廣播檔案</p>
+        <p class="text-slate-400">點擊此處解除瀏覽器靜音限制，並載入 Google Drive 音檔</p>
     </div>
 
     <!-- 倒數顯示區 -->
@@ -54,17 +54,12 @@
     </div>
 
     <script>
-        // ==========================================
-        // 🚨 雲端音檔設定區 🚨
-        // 請將下方引號內的網址，換成您轉好的 Google Drive 直連網址
-        // ==========================================
+        // 您的專屬 Google Drive 網址
         const AUDIO_URLS = {
-            // 範例： "https://drive.google.com/uc?export=download&id=您的檔案ID"
             intro: "https://drive.google.com/uc?export=download&id=1Ahj4SJp5aztqxBQ4IIDr36oVdiXH8eCP", 
             short: "https://drive.google.com/uc?export=download&id=171jZTaIBuTNWWbURtSLDfk8Jg5gu5lfy",
             long:  "https://drive.google.com/uc?export=download&id=1fe7ezTuCPG4QPHJY8kUG61uHuyVEz80_"
         };
-        // ==========================================
 
         let introAudio, shortAudio, longAudio;
         let timeLeft = 15 * 60; 
@@ -86,7 +81,7 @@
 
             const createAudio = (url) => {
                 const a = new Audio(url);
-                a.crossOrigin = "anonymous"; // 幫助解決跨域問題
+                // ⚠️ 移除 crossOrigin 屬性！這是導致 Google Drive 擋住連線的元兇 ⚠️
                 a.preload = "auto";
                 return a;
             };
@@ -99,7 +94,7 @@
                 a.play().then(() => { 
                     a.pause(); 
                     a.currentTime = 0; 
-                }).catch(e => console.warn("等待播放：", e));
+                }).catch(e => console.warn("等待播放解鎖"));
             };
 
             [introAudio, shortAudio, longAudio].forEach(unlock);
@@ -107,7 +102,7 @@
             audioInitialized = true;
             overlay.style.display = 'none';
             statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-            speechStatus.textContent = "雲端音檔連接成功";
+            speechStatus.textContent = "Google Drive 音檔連接成功";
         }
 
         function speak(text) {
@@ -121,23 +116,30 @@
 
         function playFullAnnouncement() {
             if (!audioInitialized) return;
+            speechStatus.textContent = "正在播放：大會說明...";
             introAudio.currentTime = 0;
             introAudio.play().catch(e => {
-                speechStatus.textContent = "大會說明載入失敗，請檢查網址";
-                console.error(e);
+                speechStatus.textContent = "播放失敗！Google Drive 可能封鎖了要求";
+                console.error("Intro 播放錯誤:", e);
             });
         }
 
         function playShortBell() {
             if (!audioInitialized) return;
+            speechStatus.textContent = "正在播放：短鈴...";
             shortAudio.currentTime = 0;
-            shortAudio.play().catch(e => speechStatus.textContent = "短鈴載入失敗，請檢查網址");
+            shortAudio.play().catch(e => {
+                speechStatus.textContent = "播放失敗！Google Drive 可能封鎖了要求";
+            });
         }
 
         function playLongBell() {
             if (!audioInitialized) return;
+            speechStatus.textContent = "正在播放：長鈴...";
             longAudio.currentTime = 0;
-            longAudio.play().catch(e => speechStatus.textContent = "長鈴載入失敗，請檢查網址");
+            longAudio.play().catch(e => {
+                speechStatus.textContent = "播放失敗！Google Drive 可能封鎖了要求";
+            });
         }
 
         function startTimer() {
@@ -147,7 +149,7 @@
             timerId = setInterval(() => {
                 timeLeft--;
                 const elapsed = (15 * 60) - timeLeft;
-                if (elapsed === 590) speak("還剩5分鐘");
+                if (elapsed === 590) speak("剩下5分鐘");
                 if (elapsed === 880) playShortBell();
                 if (elapsed === 890) playLongBell();
                 if (timeLeft <= 0) { clearInterval(timerId); timerId = null; }
@@ -162,8 +164,8 @@
             if (timeLeft <= 10) {
                 timerDisplay.className = "timer-display font-bold text-red-500 animate-pulse glow-red";
                 messageDisplay.textContent = "評選結束";
-            } else if (timeLeft <= 300) {
-                messageDisplay.textContent = "剩餘五分鐘";
+            } else if (timeLeft <= 310) {
+                messageDisplay.textContent = "剩下5分鐘";
                 timerDisplay.className = "timer-display font-bold text-amber-400";
             } else {
                 timerDisplay.className = "timer-display font-bold text-blue-400";

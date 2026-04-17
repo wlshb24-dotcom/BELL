@@ -138,6 +138,16 @@
             msg.lang = 'zh-TW';
             msg.rate = 0.9;
             speechStatus.textContent = "自動播報中：" + text;
+            
+            // 新增：當語音播報結束時，自動恢復狀態列文字
+            msg.onend = () => {
+                if (timerId) {
+                    speechStatus.textContent = "計時進行中";
+                } else {
+                    speechStatus.textContent = "系統就緒";
+                }
+            };
+            
             window.speechSynthesis.speak(msg);
         }
 
@@ -188,7 +198,8 @@
             if (timeLeft <= 10) {
                 timerDisplay.className = "timer-display font-bold text-red-500 animate-pulse glow-red";
                 messageDisplay.textContent = "評選結束";
-            } else if (timeLeft <= 310) {
+            } else if (timeLeft <= 310 && timeLeft > 300) {
+                // 修改：加上 && timeLeft > 300，讓這個畫面只維持 10 秒鐘
                 messageDisplay.textContent = "剩下5分鐘";
                 timerDisplay.className = "timer-display font-bold text-amber-400";
             } else {

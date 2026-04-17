@@ -3,26 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>評選流程自動化系統 - 雲端修復版</title>
+    <title>評選流程自動化系統 - 本地無敵版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap');
         body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         .timer-display { font-family: 'JetBrains+Mono', monospace; font-size: 26vw; line-height: 0.9; text-shadow: 0 0 50px rgba(59, 130, 246, 0.4); }
-        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.98); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; text-align: center; padding: 20px; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.98); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
         .btn-active:active { transform: scale(0.95); }
         .glow-red { text-shadow: 0 0 60px rgba(239, 68, 68, 0.8); }
+        
+        /* 隱藏預設上傳按鈕，自訂樣式 */
+        input[type="file"] { display: none; }
+        .custom-file-upload {
+            border: 2px dashed #3b82f6;
+            display: inline-block;
+            padding: 20px 40px;
+            cursor: pointer;
+            border-radius: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            transition: all 0.3s;
+        }
+        .custom-file-upload:hover { background: rgba(59, 130, 246, 0.2); }
     </style>
 </head>
 <body>
 
-    <!-- 啟動遮罩 -->
-    <div id="overlay" onclick="setupAudio()">
-        <div class="bg-blue-600 p-8 rounded-full mb-6 animate-pulse">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+    <!-- 啟動遮罩：改為上傳檔案介面 -->
+    <div id="overlay">
+        <div class="bg-blue-600 p-6 rounded-full mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
         </div>
-        <h1 class="text-4xl font-bold mb-4">點擊啟動雲端音訊系統</h1>
-        <p class="text-slate-400">點擊此處解除瀏覽器靜音限制，並載入 Google Drive 音檔</p>
+        <h1 class="text-4xl font-bold mb-4">第一步：載入音檔</h1>
+        <p class="text-slate-400 max-w-lg mb-8">為了突破瀏覽器封鎖，請點擊下方按鈕，並「同時選取」您的三個音檔（大會說明、短鈴、長鈴）。</p>
+        
+        <label class="custom-file-upload group">
+            <input type="file" id="audioUpload" accept="audio/*" multiple />
+            <span class="text-2xl font-bold text-blue-400 group-hover:text-blue-300">📁 點擊這裡選擇音檔</span>
+        </label>
+        
+        <div id="uploadStatus" class="mt-6 text-amber-400 font-medium h-6"></div>
     </div>
 
     <!-- 倒數顯示區 -->
@@ -54,14 +74,10 @@
     </div>
 
     <script>
-        // 您的專屬 Google Drive 網址
-        const AUDIO_URLS = {
-            intro: "https://drive.google.com/uc?export=download&id=1Ahj4SJp5aztqxBQ4IIDr36oVdiXH8eCP", 
-            short: "https://drive.google.com/uc?export=download&id=171jZTaIBuTNWWbURtSLDfk8Jg5gu5lfy",
-            long:  "https://drive.google.com/uc?export=download&id=1fe7ezTuCPG4QPHJY8kUG61uHuyVEz80_"
-        };
-
-        let introAudio, shortAudio, longAudio;
+        let introAudio = new Audio();
+        let shortAudio = new Audio();
+        let longAudio = new Audio();
+        
         let timeLeft = 15 * 60; 
         let timerId = null;
         let audioInitialized = false;
@@ -73,85 +89,93 @@
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         const overlay = document.getElementById('overlay');
+        const uploadStatus = document.getElementById('uploadStatus');
 
-        function setupAudio() {
-            if (audioInitialized) return;
-            
-            speechStatus.textContent = "正在連接雲端音檔...";
+        // 處理使用者選擇的檔案
+        document.getElementById('audioUpload').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
 
-            const createAudio = (url) => {
-                const a = new Audio(url);
-                // ⚠️ 移除 crossOrigin 屬性！這是導致 Google Drive 擋住連線的元兇 ⚠️
-                a.preload = "auto";
-                return a;
-            };
+            let loadedCount = 0;
 
-            introAudio = createAudio(AUDIO_URLS.intro);
-            shortAudio = createAudio(AUDIO_URLS.short);
-            longAudio = createAudio(AUDIO_URLS.long);
+            for (let file of files) {
+                const url = URL.createObjectURL(file);
+                const fileName = file.name.toLowerCase();
 
-            const unlock = (a) => {
-                a.play().then(() => { 
-                    a.pause(); 
-                    a.currentTime = 0; 
-                }).catch(e => console.warn("等待播放解鎖"));
-            };
+                // 根據檔名關鍵字自動分配音軌
+                if (fileName.includes('intro') || fileName.includes('大會')) {
+                    introAudio.src = url;
+                    loadedCount++;
+                } else if (fileName.includes('short') || fileName.includes('短')) {
+                    shortAudio.src = url;
+                    loadedCount++;
+                } else if (fileName.includes('long') || fileName.includes('長')) {
+                    longAudio.src = url;
+                    loadedCount++;
+                }
+            }
 
-            [introAudio, shortAudio, longAudio].forEach(unlock);
+            if (loadedCount > 0) {
+                // 執行靜音解鎖
+                [introAudio, shortAudio, longAudio].forEach(a => {
+                    if(a.src) {
+                        a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(e => console.warn(e));
+                    }
+                });
 
-            audioInitialized = true;
-            overlay.style.display = 'none';
-            statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-            speechStatus.textContent = "Google Drive 音檔連接成功";
-        }
+                audioInitialized = true;
+                overlay.style.display = 'none';
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                speechStatus.textContent = `成功載入音檔，系統就緒！`;
+            } else {
+                uploadStatus.textContent = "⚠️ 無法辨識檔名！請確認檔名包含 intro, short 或 long";
+            }
+        });
 
         function speak(text) {
             window.speechSynthesis.cancel();
             const msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'zh-TW';
             msg.rate = 0.9;
-            speechStatus.textContent = "TTS播報：" + text;
+            speechStatus.textContent = "自動播報中：" + text;
             window.speechSynthesis.speak(msg);
         }
 
         function playFullAnnouncement() {
-            if (!audioInitialized) return;
+            if (!audioInitialized || !introAudio.src) return alert("尚未載入大會說明音檔！");
             speechStatus.textContent = "正在播放：大會說明...";
             introAudio.currentTime = 0;
-            introAudio.play().catch(e => {
-                speechStatus.textContent = "播放失敗！Google Drive 可能封鎖了要求";
-                console.error("Intro 播放錯誤:", e);
-            });
+            introAudio.play().catch(e => console.error(e));
         }
 
         function playShortBell() {
-            if (!audioInitialized) return;
+            if (!audioInitialized || !shortAudio.src) return;
             speechStatus.textContent = "正在播放：短鈴...";
             shortAudio.currentTime = 0;
-            shortAudio.play().catch(e => {
-                speechStatus.textContent = "播放失敗！Google Drive 可能封鎖了要求";
-            });
+            shortAudio.play().catch(e => console.error(e));
         }
 
         function playLongBell() {
-            if (!audioInitialized) return;
+            if (!audioInitialized || !longAudio.src) return;
             speechStatus.textContent = "正在播放：長鈴...";
             longAudio.currentTime = 0;
-            longAudio.play().catch(e => {
-                speechStatus.textContent = "播放失敗！Google Drive 可能封鎖了要求";
-            });
+            longAudio.play().catch(e => console.error(e));
         }
 
         function startTimer() {
             if (timerId) return;
             startBtn.classList.add('hidden');
             pauseBtn.classList.remove('hidden');
+            speechStatus.textContent = "計時開始";
+            
             timerId = setInterval(() => {
                 timeLeft--;
                 const elapsed = (15 * 60) - timeLeft;
+                
                 if (elapsed === 590) speak("剩下5分鐘");
                 if (elapsed === 880) playShortBell();
                 if (elapsed === 890) playLongBell();
+                
                 if (timeLeft <= 0) { clearInterval(timerId); timerId = null; }
                 updateDisplay();
             }, 1000);
@@ -177,7 +201,7 @@
             clearInterval(timerId); timerId = null;
             timeLeft = 15 * 60;
             window.speechSynthesis.cancel();
-            [introAudio, shortAudio, longAudio].forEach(a => { a.pause(); a.currentTime = 0; });
+            [introAudio, shortAudio, longAudio].forEach(a => { if(a.src) { a.pause(); a.currentTime = 0; } });
             updateDisplay();
             startBtn.classList.remove('hidden');
             pauseBtn.classList.add('hidden');
@@ -189,6 +213,7 @@
             clearInterval(timerId); timerId = null;
             startBtn.classList.remove('hidden');
             pauseBtn.classList.add('hidden');
+            speechStatus.textContent = "已暫停";
         });
         document.getElementById('resetBtn').addEventListener('click', resetTimer);
         updateDisplay();

@@ -35,7 +35,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
         </div>
         <h1 class="text-4xl font-bold mb-4">第一步：載入音檔</h1>
-        <p class="text-slate-400 max-w-lg mb-8">為了突破瀏覽器封鎖，請點擊下方按鈕，並「同時選取」您的三個音檔（大會說明、短鈴、長鈴）。</p>
+        <p class="text-slate-400 max-w-lg mb-8">請點擊下方按鈕，並「同時選取」您的三個音檔（大會說明、短鈴、長鈴）。</p>
         
         <label class="custom-file-upload group">
             <input type="file" id="audioUpload" accept="audio/*" multiple />
@@ -70,6 +70,14 @@
             <button onclick="playShortBell()" class="flex-1 py-4 bg-slate-800 border border-slate-700 rounded-xl hover:bg-slate-700 transition-all btn-active flex items-center justify-center gap-2">🔔 短鈴</button>
             <button onclick="playLongBell()" class="flex-1 py-4 bg-slate-800 border border-slate-700 rounded-xl hover:bg-slate-700 transition-all btn-active flex items-center justify-center gap-2">📢 長鈴</button>
             <button id="resetBtn" class="px-10 py-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-slate-300 transition-all btn-active">重設</button>
+        </div>
+        
+        <!-- 新增：測試跳轉專區 -->
+        <div class="mt-8 flex gap-4 items-center border-t border-slate-800 pt-6 w-full max-w-3xl justify-center opacity-70 hover:opacity-100 transition-opacity">
+            <span class="text-slate-500 font-bold text-sm">快速測試 (跳至觸發前2秒)：</span>
+            <button onclick="jumpToTime(312)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 rounded-lg text-sm transition-all btn-active">跳至 05:12 (語音)</button>
+            <button onclick="jumpToTime(22)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 rounded-lg text-sm transition-all btn-active">跳至 00:22 (短鈴)</button>
+            <button onclick="jumpToTime(12)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 rounded-lg text-sm transition-all btn-active">跳至 00:12 (長鈴)</button>
         </div>
     </div>
 
@@ -217,6 +225,13 @@
             startBtn.classList.remove('hidden');
             pauseBtn.classList.add('hidden');
             speechStatus.textContent = "重設完畢";
+        }
+
+        // 新增：時間跳轉功能
+        function jumpToTime(seconds) {
+            timeLeft = seconds;
+            updateDisplay();
+            speechStatus.textContent = `已跳轉，等待觸發...`;
         }
 
         startBtn.addEventListener('click', startTimer);
